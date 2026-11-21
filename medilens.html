@@ -1,0 +1,3070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediLens – Medical Report Understanding &amp; Health Record Companion</title>
+
+  <!-- Google Fonts: Newsreader (serif), Noto Sans + Noto Sans Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600;6..72,700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- CDN Libraries: Tesseract.js v5, PDF.js v3 (UMD), Chart.js v4 (UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #0b6e6e;
+      --primary-dark: #064e4e;
+      --primary-soft: #e3f1ef;
+      --primary-tint: #f2f8f7;
+      --bg: #eef3f1;
+      --surface: #ffffff;
+      --surface-alt: #f8fbfa;
+      --border: #cfe0dc;
+      --text: #0e2a2b;
+      --muted: #4b6869;
+
+      /* Disclaimer Amber */
+      --amber-banner-bg: #fef3c7;
+      --amber-banner-text: #78350f;
+      --amber-banner-border: #f59e0b;
+
+      /* Soft Status Palette */
+      --within-bg: #e3f5ec;
+      --within-text: #145a3a;
+      --within-border: #b7e4cc;
+
+      --below-bg: #fef3d6;
+      --below-text: #7c4a03;
+      --below-border: #f6d88c;
+
+      --above-bg: #fce8ea;
+      --above-text: #882230;
+      --above-border: #f3bcc3;
+
+      --missing-bg: #ebf0ef;
+      --missing-text: #475f60;
+      --missing-border: #cfdada;
+
+      --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+      --font-sans: "Noto Sans", "Noto Sans Devanagari", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+      --radius: 14px;
+      --shadow: 0 2px 14px rgba(6, 78, 78, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      padding-bottom: 56px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .serif {
+      font-family: var(--font-serif);
+    }
+
+    /* Permanent Amber Safety Disclaimer Banner */
+    .safety-banner {
+      background: var(--amber-banner-bg);
+      color: var(--amber-banner-text);
+      border-bottom: 2px solid var(--amber-banner-border);
+      padding: 10px 18px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 20px;
+    }
+
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-weight: 700;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(11, 110, 110, 0.22);
+    }
+
+    .brand h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+
+    .brand p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 0.83rem;
+      font-weight: 600;
+    }
+
+    /* Navigation Tabs */
+    .nav-bar {
+      max-width: 1120px;
+      margin: 20px auto 0;
+      padding: 0 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-family: var(--font-sans);
+      font-size: 0.94rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .nav-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(11, 110, 110, 0.2);
+    }
+
+    .nav-btn:hover:not(.active) {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1120px;
+      margin: 18px auto 0;
+      padding: 0 16px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-family: var(--font-serif);
+      font-size: 1.32rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      line-height: 1.25;
+    }
+
+    .card-subtitle {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 0.89rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--surface-alt);
+      border-color: #a9c7c2;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    .btn-soft {
+      background: var(--primary-soft);
+      border-color: #b7d7d3;
+      color: var(--primary-dark);
+    }
+
+    .btn-soft:hover {
+      background: #d2e9e6;
+    }
+
+    .btn-danger {
+      background: var(--above-bg);
+      border-color: var(--above-border);
+      color: var(--above-text);
+    }
+
+    .btn-danger:hover {
+      background: #f9d5d9;
+    }
+
+    .btn-recording {
+      background: #9f1239;
+      border-color: #9f1239;
+      color: #ffffff;
+      animation: pulseMic 1.4s infinite;
+    }
+
+    @keyframes pulseMic {
+      0% { box-shadow: 0 0 0 0 rgba(159, 18, 57, 0.35); }
+      70% { box-shadow: 0 0 0 8px rgba(159, 18, 57, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(159, 18, 57, 0); }
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 0.82rem;
+    }
+
+    /* Upload Zone */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 780px) {
+      .upload-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .drop-zone {
+      border: 2px dashed #8cbcb6;
+      background: var(--primary-tint);
+      border-radius: var(--radius);
+      padding: 28px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .drop-zone.dragover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+
+    .drop-zone-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Preview Box */
+    .preview-box {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-alt);
+      min-height: 195px;
+      max-height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    .preview-box img,
+    .preview-box canvas {
+      max-width: 100%;
+      max-height: 256px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .preview-placeholder {
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* Progress Bar */
+    .progress-wrap {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .progress-wrap.visible {
+      display: block;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #dce8e6;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), #189894);
+      transition: width 0.2s ease;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 15px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-top: 14px;
+      display: none;
+    }
+
+    .alert.visible {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .alert-info {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      border: 1px solid #b7d7d3;
+    }
+
+    .alert-warn {
+      background: var(--below-bg);
+      color: var(--below-text);
+      border: 1px solid var(--below-border);
+    }
+
+    .alert-error {
+      background: var(--above-bg);
+      color: var(--above-text);
+      border: 1px solid var(--above-border);
+    }
+
+    .alert-success {
+      background: var(--within-bg);
+      color: var(--within-text);
+      border: 1px solid var(--within-border);
+    }
+
+    /* Collapsible Raw OCR Box */
+    details.raw-box {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-alt);
+    }
+
+    details.raw-box summary {
+      padding: 11px 14px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--primary-dark);
+    }
+
+    .raw-box-body {
+      padding: 0 14px 14px;
+    }
+
+    .raw-textarea {
+      width: 100%;
+      min-height: 135px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.84rem;
+      color: var(--text);
+      background: var(--surface);
+      resize: vertical;
+      margin-bottom: 10px;
+    }
+
+    /* Patient Problem / Voice Notes & Clarify/Confirm Box */
+    .voice-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 98px;
+      border: 1px solid #bfd4d0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: var(--font-sans);
+      font-size: 0.94rem;
+      color: var(--text);
+      background: var(--surface-alt);
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .notes-textarea:focus {
+      outline: 2px solid rgba(11, 110, 110, 0.25);
+      border-color: var(--primary);
+      background: var(--surface);
+    }
+
+    .notes-textarea.input-invalid {
+      border-color: #c23348;
+      background: #fff9fa;
+    }
+
+    .live-transcript {
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-style: italic;
+      margin-top: 6px;
+      min-height: 1.2em;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .prompt-chip {
+      border: 1px solid var(--border);
+      background: var(--primary-tint);
+      color: var(--primary-dark);
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .prompt-chip:hover {
+      background: var(--primary-soft);
+    }
+
+    .clarify-box {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--primary-tint);
+      padding: 15px;
+      display: none;
+    }
+
+    .clarify-box.visible {
+      display: block;
+    }
+
+    .clarify-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .clarify-header h3 {
+      font-size: 1.05rem;
+      color: var(--primary-dark);
+    }
+
+    .clarify-quote {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      margin-bottom: 10px;
+    }
+
+    .clarify-questions {
+      font-size: 0.88rem;
+      color: var(--below-text);
+      background: var(--below-bg);
+      border: 1px solid var(--below-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+
+    .clarify-questions ul {
+      margin: 6px 0 0 18px;
+    }
+
+    .confirm-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .confirm-badge.confirmed {
+      background: var(--within-bg);
+      color: var(--within-text);
+      border: 1px solid var(--within-border);
+    }
+
+    .confirm-badge.pending {
+      background: var(--below-bg);
+      color: var(--below-text);
+      border: 1px solid var(--below-border);
+    }
+
+    .notes-summary-box {
+      background: var(--primary-tint);
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 0.92rem;
+    }
+
+    .notes-summary-box strong {
+      color: var(--primary-dark);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* Results Table */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 740px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--primary-tint);
+      font-weight: 700;
+      color: var(--primary-dark);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table-input {
+      width: 100%;
+      padding: 7px 9px;
+      border: 1px solid #bfd4d0;
+      border-radius: 7px;
+      font-family: var(--font-sans);
+      font-size: 0.89rem;
+      color: var(--text);
+      background: #ffffff;
+    }
+
+    .table-input.value-input {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      min-width: 92px;
+    }
+
+    .table-input:focus {
+      outline: 2px solid rgba(11, 110, 110, 0.25);
+      border-color: var(--primary);
+    }
+
+    .table-input.cell-error {
+      border-color: #c23348;
+      background: #fff5f6;
+    }
+
+    .cell-hint {
+      font-size: 0.74rem;
+      color: var(--above-text);
+      margin-top: 3px;
+      display: block;
+    }
+
+    .trend-value {
+      font-family: var(--font-serif);
+      font-size: 1.08rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--primary-dark);
+    }
+
+    .status-pill {
+      display: inline-block;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      line-height: 1.3;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .status-within {
+      background: var(--within-bg);
+      color: var(--within-text);
+      border-color: var(--within-border);
+    }
+
+    .status-below {
+      background: var(--below-bg);
+      color: var(--below-text);
+      border-color: var(--below-border);
+    }
+
+    .status-above {
+      background: var(--above-bg);
+      color: var(--above-text);
+      border-color: var(--above-border);
+    }
+
+    .status-missing {
+      background: var(--missing-bg);
+      color: var(--missing-text);
+      border-color: var(--missing-border);
+    }
+
+    /* Save Report Bar */
+    .save-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .field-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .field-group label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+    }
+
+    .input-control {
+      padding: 8px 11px;
+      border: 1px solid #bfd4d0;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      color: var(--text);
+      background: #ffffff;
+    }
+
+    .input-control:focus {
+      outline: 2px solid rgba(11, 110, 110, 0.25);
+      border-color: var(--primary);
+    }
+
+    /* Language Toggle & Explanations */
+    .lang-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      padding: 7px 14px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .explanations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .explain-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 15px;
+      background: var(--surface-alt);
+    }
+
+    .explain-card h4 {
+      font-family: var(--font-serif);
+      font-size: 1.06rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+
+    .explain-card p {
+      font-size: 0.89rem;
+      color: var(--text);
+    }
+
+    /* Doctor Questions */
+    .questions-list {
+      list-style: decimal inside;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .questions-list li {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 11px 14px;
+      font-size: 0.92rem;
+    }
+
+    /* History & Chart */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .history-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 15px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--surface-alt);
+    }
+
+    .chart-box {
+      position: relative;
+      height: 300px;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 26px 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media print {
+      .safety-banner {
+        position: static;
+        background: #ffffff;
+        color: #000000;
+        border-bottom: 1px solid #000000;
+      }
+      .nav-bar,
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff;
+      }
+      .card {
+        box-shadow: none;
+        border: 1px solid #cccccc;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Permanent Amber Safety Disclaimer Banner -->
+  <div class="safety-banner" role="alert">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>MediLens is an educational tool. It does not diagnose, predict health conditions, or recommend treatment. Please consult a qualified doctor.</span>
+  </div>
+
+  <!-- Header -->
+  <header class="no-print">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">M</div>
+        <div>
+          <h1>MediLens</h1>
+          <p>Medical Report Understanding &amp; Health Record Companion</p>
+        </div>
+      </div>
+      <div class="privacy-badge" title="All OCR, voice notes, and storage stay locally in your browser">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Your report never leaves your device.</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-bar no-print" aria-label="Primary navigation">
+    <button type="button" class="nav-btn active" data-tab="analyzeTab" onclick="switchTab('analyzeTab')">
+      1. Analyze Report
+    </button>
+    <button type="button" class="nav-btn" data-tab="historyTab" onclick="switchTab('historyTab')">
+      2. Saved History &amp; Trends (<span id="historyCountBadge">0</span>)
+    </button>
+  </nav>
+
+  <main>
+    <!-- TAB 1: ANALYZE REPORT -->
+    <section id="analyzeTab" class="tab-panel active">
+
+      <!-- Upload & Preview Card -->
+      <div class="card no-print">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Upload Lab Report</h2>
+            <p class="card-subtitle">Supports JPG, PNG, and PDF files. Images are enhanced locally for clearer OCR.</p>
+          </div>
+          <button type="button" class="btn btn-soft" onclick="loadSampleReport()">
+            Load sample report
+          </button>
+        </div>
+
+        <div class="upload-grid">
+          <div>
+            <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Upload lab report file">
+              <div class="drop-zone-icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <div><strong>Drag &amp; drop your lab report here</strong></div>
+              <div class="card-subtitle">or click to choose JPG, PNG, or PDF</div>
+              <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" hidden />
+            </div>
+
+            <div id="progressWrap" class="progress-wrap">
+              <div class="progress-label">
+                <span id="progressStatus">Preparing OCR...</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="progress-track">
+                <div id="progressFill" class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-box" id="previewBox">
+            <div class="preview-placeholder">Report preview will appear here after selecting a file.</div>
+          </div>
+        </div>
+
+        <div id="statusAlert" class="alert" role="status"></div>
+
+        <!-- Collapsible Raw OCR Text -->
+        <details class="raw-box" id="rawTextDetails">
+          <summary>View / Edit Raw Extracted Text</summary>
+          <div class="raw-box-body">
+            <textarea id="rawOcrText" class="raw-textarea" placeholder="Extracted OCR text will appear here. You can also paste or edit text and click Re-parse Text."></textarea>
+            <button type="button" class="btn btn-sm btn-soft" onclick="reparseFromTextarea()">Re-parse Text</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Speak / Write, Clarify & Confirm Your Problem Card -->
+      <div class="card no-print">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Share, Clarify &amp; Confirm Your Concern (अपनी समस्या बोलें, जाँचें और पुष्टि करें)</h2>
+            <p class="card-subtitle">Speak or type what you feel. MediLens validates input, asks clarifying prompts (like duration), and reads back your note for confirmation—without diagnosing.</p>
+          </div>
+          <span id="notesConfirmBadge" class="confirm-badge pending" style="display: none;">Needs Confirmation</span>
+        </div>
+
+        <div class="voice-controls">
+          <div class="field-group">
+            <label for="voiceLangSelect">Voice Language:</label>
+            <select id="voiceLangSelect" class="input-control">
+              <option value="hi-IN">हिन्दी (Hindi)</option>
+              <option value="en-IN">English (India)</option>
+            </select>
+            <button type="button" id="voiceBtn" class="btn btn-soft" onclick="toggleVoiceInput()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <span id="voiceBtnLabel">Speak / बोलकर लिखें</span>
+            </button>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-sm btn-primary" onclick="clarifyPatientNotes()">Clarify &amp; Check</button>
+            <button type="button" class="btn btn-sm" onclick="clearPatientNotes()">Clear</button>
+          </div>
+        </div>
+
+        <textarea
+          id="patientNotesInput"
+          class="notes-textarea"
+          placeholder="Example: Feeling tired since 2 weeks, mild dizziness in the morning... / उदाहरण: मुझे पिछले 2 हफ्ते से थकान महसूस हो रही है..."
+          oninput="handlePatientNotesChange()"
+        ></textarea>
+        <div id="liveTranscript" class="live-transcript" aria-live="polite"></div>
+        <div id="voiceAlert" class="alert" role="status"></div>
+
+        <div class="chip-row" aria-label="Quick note helpers">
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('since 3 days. ')">+ since 3 days</button>
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('since 1 week. ')">+ since 1 week</button>
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('Feeling tired / low energy. ')">+ Tired / low energy</button>
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('Noticeable mostly in the morning. ')">+ Mostly in morning</button>
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('पिछले 3 दिनों से परेशानी है। ')">+ पिछले 3 दिनों से</button>
+          <button type="button" class="prompt-chip" onclick="appendNotePhrase('पिछले 1 हफ्ते से थकान और कमज़ोरी है। ')">+ 1 हफ्ते से थकान</button>
+        </div>
+
+        <!-- Clarify & Confirm Summary Panel -->
+        <div id="clarifyBox" class="clarify-box" aria-live="polite">
+          <div class="clarify-header">
+            <h3>Clarify &amp; Confirm Your Note (पुष्टि करें)</h3>
+          </div>
+          <div id="clarifyQuote" class="clarify-quote"></div>
+          <div id="clarifyQuestions" class="clarify-questions" style="display: none;"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-sm btn-primary" onclick="confirmPatientNotes()">Confirm Note / पुष्टि करें</button>
+            <button type="button" class="btn btn-sm btn-soft" onclick="readNotesAloud()">Read Aloud / सुनकर जाँचें</button>
+            <button type="button" class="btn btn-sm" onclick="focusNotesForEdit()">Edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parsed Results Table Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Detected Lab Values</h2>
+            <p class="card-subtitle">Review and edit any value, unit, or lab-printed range below before saving.</p>
+          </div>
+          <div class="btn-row no-print">
+            <button type="button" class="btn btn-sm btn-soft" onclick="addManualRow()">+ Add Test Row</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Test (Canonical Name)</th>
+                <th>Value</th>
+                <th>Unit</th>
+                <th>Reference Range (Lab Printed)</th>
+                <th>Status</th>
+                <th class="no-print">Action</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <tr>
+                <td colspan="6" class="empty-state">
+                  Upload a report or click <strong>Load sample report</strong> to view parsed test values.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="save-bar no-print">
+          <div class="field-group">
+            <label for="reportDateInput">Report Date:</label>
+            <input type="date" id="reportDateInput" class="input-control" />
+            <input type="text" id="reportLabelInput" class="input-control" placeholder="Optional label (e.g. Annual Checkup)" />
+          </div>
+          <button type="button" class="btn btn-primary" onclick="saveReport()">
+            Save Report to Device
+          </button>
+        </div>
+        <div id="saveAlert" class="alert" role="status"></div>
+      </div>
+
+      <!-- Simple Explanations Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">What Each Test Measures</h2>
+            <p class="card-subtitle">Plain-language educational notes describing what each test checks.</p>
+          </div>
+          <div class="lang-toggle no-print" role="group" aria-label="Explanation language">
+            <button type="button" class="lang-btn active" id="langEnBtn" onclick="setLanguage('en')">English</button>
+            <button type="button" class="lang-btn" id="langHiBtn" onclick="setLanguage('hi')">हिन्दी (Hindi)</button>
+          </div>
+        </div>
+
+        <div id="explanationsContainer" class="explanations-grid">
+          <div class="empty-state">Detected tests will show plain-language explanations here.</div>
+        </div>
+      </div>
+
+      <!-- Doctor Appointment Questions Card -->
+      <div class="card" id="doctorQuestionsCard">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Questions &amp; Notes for Your Doctor</h2>
+            <p class="card-subtitle">Includes your confirmed notes and neutral prompts for readings outside the lab's printed range.</p>
+          </div>
+          <div class="btn-row no-print">
+            <button type="button" class="btn btn-sm" onclick="copyQuestions()">Copy</button>
+            <button type="button" class="btn btn-sm" onclick="window.print()">Print</button>
+          </div>
+        </div>
+
+        <div id="patientNotesSummary" class="notes-summary-box" style="display: none;"></div>
+
+        <ol id="questionsList" class="questions-list">
+          <li class="empty-state" style="list-style: none;">Questions will appear here once tests are loaded or notes are confirmed.</li>
+        </ol>
+        <div id="copyFeedback" class="alert alert-success" style="margin-top: 10px;"></div>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: SAVED HISTORY & TRENDS -->
+    <section id="historyTab" class="tab-panel">
+
+      <!-- Historical Comparison Chart -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Historical Trend Comparison</h2>
+            <p class="card-subtitle">Matches test aliases (such as Hb and Hemoglobin) across your saved reports.</p>
+          </div>
+          <div class="field-group">
+            <label for="trendTestSelect">Select Test:</label>
+            <select id="trendTestSelect" class="input-control" onchange="renderTrendChart()">
+              <option value="">-- Choose a test --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <canvas id="trendChartCanvas"></canvas>
+        </div>
+
+        <div class="table-wrap" style="margin-top: 16px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Report Date</th>
+                <th>Label</th>
+                <th>Value</th>
+                <th>Unit</th>
+                <th>Lab Reference Range</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="trendTableBody">
+              <tr>
+                <td colspan="6" class="empty-state">Save reports and select a test to compare values over time.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Saved Reports List -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Saved Reports on This Device</h2>
+            <p class="card-subtitle">Stored locally in browser storage only.</p>
+          </div>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="empty-state">No saved reports yet.</div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    /* =========================================================================
+       MediLens – Client-Side Medical Report Understanding & Health Record App
+       ========================================================================= */
+
+    if (typeof pdfjsLib !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    const STORAGE_KEY = "medilens_saved_reports_v1";
+
+    // Application state
+    let currentRows = [];
+    let currentLang = "en";
+    let trendChartInstance = null;
+
+    // Voice & Clarify/Confirm state
+    let recognitionInstance = null;
+    let isListening = false;
+    let voiceSessionBaseText = "";
+    let isNotesConfirmed = false;
+
+    /* -------------------------------------------------------------------------
+       1. Test Alias Normalization Dictionary (21 Canonical Lab Tests)
+       ------------------------------------------------------------------------- */
+    const TEST_ALIASES = {
+      "hb": "Hemoglobin",
+      "hgb": "Hemoglobin",
+      "hb%": "Hemoglobin",
+      "hemoglobin": "Hemoglobin",
+      "haemoglobin": "Hemoglobin",
+      "hemoglobin hb": "Hemoglobin",
+
+      "rbc": "RBC",
+      "rbc count": "RBC",
+      "total rbc": "RBC",
+      "red blood cell": "RBC",
+      "red blood cells": "RBC",
+      "red blood cell count": "RBC",
+      "erythrocytes": "RBC",
+
+      "wbc": "WBC",
+      "wbc count": "WBC",
+      "total wbc": "WBC",
+      "total wbc count": "WBC",
+      "tlc": "WBC",
+      "total leukocyte count": "WBC",
+      "total leucocyte count": "WBC",
+      "white blood cell": "WBC",
+      "white blood cells": "WBC",
+      "white blood cell count": "WBC",
+
+      "platelets": "Platelets",
+      "platelet": "Platelets",
+      "platelet count": "Platelets",
+      "plt": "Platelets",
+      "thrombocytes": "Platelets",
+
+      "hematocrit": "Hematocrit",
+      "haematocrit": "Hematocrit",
+      "hct": "Hematocrit",
+      "pcv": "Hematocrit",
+      "packed cell volume": "Hematocrit",
+
+      "mcv": "MCV",
+      "mean corpuscular volume": "MCV",
+
+      "mch": "MCH",
+      "mean corpuscular hemoglobin": "MCH",
+      "mean corpuscular haemoglobin": "MCH",
+
+      "mchc": "MCHC",
+      "mean corpuscular hemoglobin concentration": "MCHC",
+      "mean corpuscular haemoglobin concentration": "MCHC",
+
+      "total cholesterol": "Total Cholesterol",
+      "cholesterol total": "Total Cholesterol",
+      "cholesterol": "Total Cholesterol",
+      "serum cholesterol": "Total Cholesterol",
+      "s cholesterol": "Total Cholesterol",
+
+      "hdl": "HDL",
+      "hdl cholesterol": "HDL",
+      "hdl c": "HDL",
+      "high density lipoprotein": "HDL",
+
+      "ldl": "LDL",
+      "ldl cholesterol": "LDL",
+      "ldl c": "LDL",
+      "low density lipoprotein": "LDL",
+
+      "triglycerides": "Triglycerides",
+      "triglyceride": "Triglycerides",
+      "tg": "Triglycerides",
+      "serum triglycerides": "Triglycerides",
+
+      "vldl": "VLDL",
+      "vldl cholesterol": "VLDL",
+      "very low density lipoprotein": "VLDL",
+
+      "tsh": "TSH",
+      "thyroid stimulating hormone": "TSH",
+      "serum tsh": "TSH",
+      "s tsh": "TSH",
+      "tsh ultrasensitive": "TSH",
+      "ultrasensitive tsh": "TSH",
+
+      "t3": "T3",
+      "total t3": "T3",
+      "free t3": "T3",
+      "ft3": "T3",
+      "triiodothyronine": "T3",
+
+      "t4": "T4",
+      "total t4": "T4",
+      "free t4": "T4",
+      "ft4": "T4",
+      "thyroxine": "T4",
+
+      "fasting glucose": "Fasting Glucose",
+      "fasting blood sugar": "Fasting Glucose",
+      "fbs": "Fasting Glucose",
+      "glucose fasting": "Fasting Glucose",
+      "blood glucose fasting": "Fasting Glucose",
+      "fasting plasma glucose": "Fasting Glucose",
+      "fpg": "Fasting Glucose",
+      "sugar fasting": "Fasting Glucose",
+
+      "postprandial glucose": "Postprandial Glucose",
+      "postprandial blood sugar": "Postprandial Glucose",
+      "post prandial blood sugar": "Postprandial Glucose",
+      "ppbs": "Postprandial Glucose",
+      "pp blood sugar": "Postprandial Glucose",
+      "glucose pp": "Postprandial Glucose",
+      "pp glucose": "Postprandial Glucose",
+
+      "hba1c": "HbA1c",
+      "hb a1c": "HbA1c",
+      "a1c": "HbA1c",
+      "glycated hemoglobin": "HbA1c",
+      "glycosylated hemoglobin": "HbA1c",
+      "glycated haemoglobin": "HbA1c",
+
+      "creatinine": "Creatinine",
+      "serum creatinine": "Creatinine",
+      "s creatinine": "Creatinine",
+      "creat": "Creatinine",
+
+      "urea": "Urea",
+      "blood urea": "Urea",
+      "serum urea": "Urea",
+      "bun": "Urea",
+      "blood urea nitrogen": "Urea"
+    };
+
+    const CANONICAL_TESTS = Array.from(new Set(Object.values(TEST_ALIASES)));
+
+    /* -------------------------------------------------------------------------
+       2. Simple Plain-Language Explanations Dictionary (English + Simple Hindi)
+       ------------------------------------------------------------------------- */
+    const TEST_EXPLANATIONS = {
+      "Hemoglobin": {
+        en: "Measures the protein in red blood cells that carries oxygen from the lungs to the rest of the body.",
+        hi: "यह लाल रक्त कोशिकाओं में मौजूद उस प्रोटीन को मापता है जो फेफड़ों से पूरे शरीर में ऑक्सीजन पहुंचाता है।"
+      },
+      "RBC": {
+        en: "Counts the number of red blood cells in a blood sample. These cells carry oxygen throughout the body.",
+        hi: "यह खून के नमूने में लाल रक्त कोशिकाओं की संख्या को गिनता है, जो शरीर में ऑक्सीजन ले जाती हैं।"
+      },
+      "WBC": {
+        en: "Counts white blood cells, which are part of the body's natural defense system.",
+        hi: "यह सफेद रक्त कोशिकाओं की संख्या को गिनता है, जो शरीर की सुरक्षा प्रणाली का हिस्सा हैं।"
+      },
+      "Platelets": {
+        en: "Counts tiny cell fragments in the blood that help form clots to stop bleeding.",
+        hi: "यह खून में मौजूद छोटे कणों की गिनती करता है जो चोट लगने पर खून को जमने में मदद करते हैं।"
+      },
+      "Hematocrit": {
+        en: "Measures the percentage of blood volume made up by red blood cells.",
+        hi: "यह बताता है कि कुल खून के हिस्से में कितने प्रतिशत लाल रक्त कोशिकाएं हैं।"
+      },
+      "MCV": {
+        en: "Measures the average size of a single red blood cell.",
+        hi: "यह एक लाल रक्त कोशिका के औसत आकार को मापता है।"
+      },
+      "MCH": {
+        en: "Measures the average amount of hemoglobin inside each red blood cell.",
+        hi: "यह हर लाल रक्त कोशिका के अंदर मौजूद हीमोग्लोबिन की औसत मात्रा को मापता है।"
+      },
+      "MCHC": {
+        en: "Measures how concentrated hemoglobin is inside a red blood cell relative to its size.",
+        hi: "यह लाल रक्त कोशिका के आकार के मुकाबले उसमें हीमोग्लोबिन के गाढ़ेपन को मापता है।"
+      },
+      "Total Cholesterol": {
+        en: "Measures the overall amount of cholesterol, a waxy fat-like substance, circulating in the blood.",
+        hi: "यह खून में बहने वाले कुल कोलेस्ट्रॉल (एक तरह की चिकनाई) की पूरी मात्रा को मापता है।"
+      },
+      "HDL": {
+        en: "Measures high-density lipoprotein, which carries cholesterol away from tissues back to the liver.",
+        hi: "यह एचडीएल कोलेस्ट्रॉल को मापता है, जो शरीर से अतिरिक्त कोलेस्ट्रॉल को लिवर तक वापस ले जाता है।"
+      },
+      "LDL": {
+        en: "Measures low-density lipoprotein, which transports cholesterol through the blood to body cells.",
+        hi: "यह एलडीएल कोलेस्ट्रॉल को मापता है, जो खून के जरिए शरीर की कोशिकाओं तक कोलेस्ट्रॉल पहुंचाता है।"
+      },
+      "Triglycerides": {
+        en: "Measures a common type of fat in the blood that comes from food and stored body energy.",
+        hi: "यह खून में मौजूद एक तरह की चर्बी (फैट) को मापता है जो भोजन और शरीर की ऊर्जा से बनती है।"
+      },
+      "VLDL": {
+        en: "Measures very low-density lipoprotein, a particle that mainly carries triglycerides in the blood.",
+        hi: "यह वीएलडीएल को मापता है, जो खून में मुख्य रूप से ट्राइग्लिसराइड्स को ले जाने का काम करता है।"
+      },
+      "TSH": {
+        en: "Measures thyroid-stimulating hormone, a messenger from the pituitary gland that guides thyroid activity.",
+        hi: "यह टीएसएच हार्मोन को मापता है, जो गले की थायरॉइड ग्रंथि को काम करने का संकेत देता है।"
+      },
+      "T3": {
+        en: "Measures triiodothyronine, one of the hormones made by the thyroid gland that affects body energy use.",
+        hi: "यह टी3 हार्मोन को मापता है, जिसे थायरॉइड ग्रंथि बनाती है और जो शरीर की ऊर्जा के उपयोग से जुड़ा है।"
+      },
+      "T4": {
+        en: "Measures thyroxine, the main hormone produced by the thyroid gland.",
+        hi: "यह टी4 (थायरॉक्सिन) हार्मोन को मापता है, जो थायरॉइड ग्रंथि द्वारा बनाया जाने वाला मुख्य हार्मोन है।"
+      },
+      "Fasting Glucose": {
+        en: "Measures the amount of sugar in the blood after not eating for at least 8 hours.",
+        hi: "यह कम से कम 8 घंटे बिना कुछ खाए रहने के बाद खून में शुगर (ग्लूकोज) की मात्रा को मापता है।"
+      },
+      "Postprandial Glucose": {
+        en: "Measures the amount of sugar in the blood usually 2 hours after eating a meal.",
+        hi: "यह खाना खाने के लगभग 2 घंटे बाद खून में शुगर (ग्लूकोज) की मात्रा को मापता है।"
+      },
+      "HbA1c": {
+        en: "Measures the average blood sugar level over the past 2 to 3 months.",
+        hi: "यह पिछले 2 से 3 महीनों के औसत ब्लड शुगर के स्तर को मापता है।"
+      },
+      "Creatinine": {
+        en: "Measures a natural waste product from normal muscle activity that the kidneys filter out of blood.",
+        hi: "यह मांसपेशियों के काम से बनने वाले एक सामान्य अपशिष्ट को मापता है, जिसे किडनी खून से छानती है।"
+      },
+      "Urea": {
+        en: "Measures urea nitrogen in the blood, a waste substance formed when the body breaks down protein.",
+        hi: "यह खून में यूरिया की मात्रा मापता है, जो शरीर में प्रोटीन टूटने से बनता है और किडनी से बाहर निकलता है।"
+      }
+    };
+
+    /* -------------------------------------------------------------------------
+       Parser Sample Test Cases
+       -------------------------------------------------------------------------
+       Case 1: "Hb:11.8 | g/dL | (13.0–17.0)"
+         -> parsed: { test: "Hemoglobin", value: 11.8, unit: "g/dL", rangeText: "13.0 - 17.0" }
+       Case 2: "Total WBC Count 7,4OO cells/cumm Adult 4,000 — 11,000"
+         -> parsed: { test: "WBC", value: 7400, unit: "cells/cumm", rangeText: "4,000 - 11,000" }
+       Case 3: "Non-HDL Cholesterol 155 mg/dL < 130"
+         -> ignored (Non-HDL / Ratio lines are excluded)
+       Case 4: "LDL Cholesterol 138 mg/dL up to 100"
+         -> parsed: { test: "LDL", value: 138, unit: "mg/dL", rangeText: "up to 100" }
+       Case 5: "HDL Cholesterol 48 mg/dL > 40"
+         -> parsed: { test: "HDL", value: 48, unit: "mg/dL", rangeText: "> 40" }
+       ------------------------------------------------------------------------- */
+
+    /**
+     * Initializes UI event listeners, default report date (max = today), and saved history.
+     */
+    function initApp() {
+      const today = new Date().toISOString().slice(0, 10);
+      const dateInput = document.getElementById("reportDateInput");
+      if (dateInput) {
+        dateInput.max = today;
+        if (!dateInput.value) {
+          dateInput.value = today;
+        }
+      }
+
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+
+      dropZone.addEventListener("click", () => fileInput.click());
+      dropZone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleUpload(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+          handleUpload(e.target.files[0]);
+        }
+      });
+
+      renderHistory();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+
+      document.getElementById(tabId).classList.add("active");
+      const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (activeBtn) activeBtn.classList.add("active");
+
+      if (tabId === "historyTab") {
+        renderHistory();
+      }
+    }
+
+    function showAlert(elementId, message, type = "info", includeRecoveryActions = false) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.className = `alert visible alert-${type}`;
+      el.innerHTML = "";
+
+      const msgSpan = document.createElement("span");
+      msgSpan.textContent = message;
+      el.appendChild(msgSpan);
+
+      if (includeRecoveryActions) {
+        const actions = document.createElement("div");
+        actions.className = "btn-row";
+        actions.innerHTML = `
+          <button type="button" class="btn btn-sm btn-soft" onclick="loadSampleReport()">Load sample report</button>
+          <button type="button" class="btn btn-sm" onclick="addManualRow()">+ Add Test Row</button>
+        `;
+        el.appendChild(actions);
+      }
+    }
+
+    function hideAlert(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.className = "alert";
+      el.innerHTML = "";
+    }
+
+    function updateProgress(visible, statusText = "", percent = 0) {
+      const wrap = document.getElementById("progressWrap");
+      const statusEl = document.getElementById("progressStatus");
+      const percentEl = document.getElementById("progressPercent");
+      const fillEl = document.getElementById("progressFill");
+
+      wrap.classList.toggle("visible", visible);
+      statusEl.textContent = statusText;
+      const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+      percentEl.textContent = clamped + "%";
+      fillEl.style.width = clamped + "%";
+    }
+
+    /* -------------------------------------------------------------------------
+       Voice Input, Input Validation, Clarification & Confirmation Flow
+       ------------------------------------------------------------------------- */
+    function toggleVoiceInput() {
+      hideAlert("voiceAlert");
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        showAlert(
+          "voiceAlert",
+          "Voice input is not supported in this browser. Please type your concern in the box above (voice works best in Chrome or Edge).",
+          "warn",
+          false
+        );
+        return;
+      }
+
+      if (isListening && recognitionInstance) {
+        recognitionInstance.stop();
+        return;
+      }
+
+      const lang = document.getElementById("voiceLangSelect").value || "hi-IN";
+      const notesEl = document.getElementById("patientNotesInput");
+      const liveEl = document.getElementById("liveTranscript");
+      const voiceBtn = document.getElementById("voiceBtn");
+      const voiceBtnLabel = document.getElementById("voiceBtnLabel");
+
+      try {
+        recognitionInstance = new SpeechRecognition();
+        recognitionInstance.lang = lang;
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+
+        recognitionInstance.onstart = () => {
+          isListening = true;
+          voiceSessionBaseText = notesEl.value.trim();
+          voiceBtn.classList.add("btn-recording");
+          voiceBtnLabel.textContent = "Listening... Click to Stop";
+          liveEl.textContent = lang === "hi-IN" ? "सुन रहे हैं... अब बोलें" : "Listening... please speak now";
+        };
+
+        // Rebuild session transcript from index 0 to prevent duplicate-word bugs on mobile browsers
+        recognitionInstance.onresult = (event) => {
+          let sessionFinal = "";
+          let sessionInterim = "";
+
+          for (let i = 0; i < event.results.length; i++) {
+            const transcript = (event.results[i][0]?.transcript || "").trim();
+            if (!transcript) continue;
+            if (event.results[i].isFinal) {
+              sessionFinal += transcript + " ";
+            } else {
+              sessionInterim += transcript + " ";
+            }
+          }
+
+          if (sessionFinal.trim()) {
+            notesEl.value = (voiceSessionBaseText ? voiceSessionBaseText + " " : "") + sessionFinal.trim() + " ";
+            handlePatientNotesChange();
+          }
+
+          liveEl.textContent = sessionInterim ? `Hearing: "${sessionInterim.trim()}"` : "";
+        };
+
+        recognitionInstance.onerror = (event) => {
+          console.error("Speech recognition error:", event.error);
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            showAlert(
+              "voiceAlert",
+              "Microphone permission was denied. Allow mic access in browser settings or type your concern directly.",
+              "error",
+              false
+            );
+          } else if (event.error === "no-speech") {
+            showAlert(
+              "voiceAlert",
+              "No speech was heard. Please speak closer to the microphone and try again.",
+              "warn",
+              false
+            );
+          } else if (event.error === "audio-capture") {
+            showAlert(
+              "voiceAlert",
+              "No working microphone was found on this device. Please type your concern in the box above.",
+              "error",
+              false
+            );
+          } else if (event.error !== "aborted") {
+            showAlert(
+              "voiceAlert",
+              `Voice input stopped (${event.error}). You can type directly in the box above.`,
+              "warn",
+              false
+            );
+          }
+        };
+
+        recognitionInstance.onend = () => {
+          isListening = false;
+          voiceBtn.classList.remove("btn-recording");
+          voiceBtnLabel.textContent = "Speak / बोलकर लिखें";
+          liveEl.textContent = "";
+          if (notesEl.value.trim()) {
+            clarifyPatientNotes();
+          }
+        };
+
+        recognitionInstance.start();
+      } catch (err) {
+        console.error("Failed to start voice recognition:", err);
+        showAlert(
+          "voiceAlert",
+          "Could not start microphone. Please type your concern directly in the box above.",
+          "warn",
+          false
+        );
+      }
+    }
+
+    /**
+     * Validates user's spoken/typed problem input against empty, gibberish,
+     * numeric-only, or placeholder errors before clarifying/confirming.
+     */
+    function validatePatientNotes(rawText) {
+      const text = (rawText || "").trim();
+
+      if (!text) {
+        return {
+          valid: false,
+          error: "Please speak or write what you are experiencing first. / कृपया पहले अपनी परेशानी बोलकर या लिखकर बताएं।"
+        };
+      }
+
+      if (/_{2,}|\[\s*\]/.test(text)) {
+        return {
+          valid: false,
+          error: "Please replace blanks like '___' with actual details (for example, number of days). / कृपया खाली जगह '___' को सही जानकारी से भरें।"
+        };
+      }
+
+      // Must contain meaningful letters (Latin or Devanagari)
+      const letterMatches = text.match(/[A-Za-z\u0900-\u097F]/g) || [];
+      if (letterMatches.length < 4) {
+        return {
+          valid: false,
+          error: "Numbers or symbols alone are not clear. Please describe in a few words. / केवल नंबर या चिन्ह पर्याप्त नहीं हैं, कृपया शब्दों में लिखें।"
+        };
+      }
+
+      // Minimum length check (at least 5 chars and not just a single short word)
+      const words = text.split(/\s+/).filter((w) => /[A-Za-z\u0900-\u097F]/.test(w));
+      if (text.length < 5 || words.length < 2) {
+        return {
+          valid: false,
+          error: "Input is too short. Please share at least 2 words (what you feel and since when). / यह बहुत छोटा है, कृपया कम से कम 2 शब्दों में लिखें।"
+        };
+      }
+
+      // Detect obvious keyboard mash / repeated character gibberish
+      if (/(.)\1{4,}/.test(text) || /^(asdf|qwer|zxcv|test+|abcd|xyz)+$/i.test(text.replace(/\s+/g, ""))) {
+        return {
+          valid: false,
+          error: "This input does not look like a clear description. Please speak or type clearly for your doctor. / यह स्पष्ट नहीं लग रहा है, कृपया साफ शब्दों में लिखें।"
+        };
+      }
+
+      return { valid: true, text };
+    }
+
+    /**
+     * Checks the user's input for validity, highlights missing context (like duration or timing)
+     * as neutral clarifying questions, and displays the confirmation box.
+     */
+    function clarifyPatientNotes() {
+      hideAlert("voiceAlert");
+      const notesEl = document.getElementById("patientNotesInput");
+      const clarifyBox = document.getElementById("clarifyBox");
+      const clarifyQuote = document.getElementById("clarifyQuote");
+      const clarifyQuestionsEl = document.getElementById("clarifyQuestions");
+
+      const check = validatePatientNotes(notesEl.value);
+
+      if (!check.valid) {
+        notesEl.classList.add("input-invalid");
+        clarifyBox.classList.remove("visible");
+        isNotesConfirmed = false;
+        updateNotesConfirmBadge();
+        showAlert("voiceAlert", check.error, "error", false);
+        generateDoctorQuestions();
+        return false;
+      }
+
+      notesEl.classList.remove("input-invalid");
+      const text = check.text;
+
+      // Neutral clarification checks (never diagnoses or evaluates health)
+      const prompts = [];
+      const hasDuration =
+        /\b(\d+|one|two|three|four|five|six|seven|few|several|many|today|yesterday|week|weeks|day|days|month|months|year|years|hour|hours|since|from)\b/i.test(
+          text
+        ) || /(दिन|दिनों|हफ्त|सप्ताह|महीन|साल|कल|आज|सुबह|शाम|घंटे|से)/.test(text);
+
+      if (!hasDuration) {
+        prompts.push(
+          "Duration missing: Since how many days or weeks have you felt this? (कब से परेशानी है? जैसे: 'since 3 days' या 'पिछले 1 हफ्ते से')"
+        );
+      }
+
+      const hasTiming =
+        /\b(morning|night|evening|afternoon|meal|meals|eating|food|sleep|walking|work|constant|always|sometimes|after|before)\b/i.test(
+          text
+        ) || /(सुबह|शाम|रात|दोपहर|खाने|नींद|चलने|काम|लगातार|कभी-कभी)/.test(text);
+
+      if (!hasTiming) {
+        prompts.push(
+          "Optional timing detail: Does it happen at a specific time (such as morning, night, after eating, or while walking)?"
+        );
+      }
+
+      clarifyQuote.innerHTML = `<strong>I understood your note as:</strong> "${escapeHtml(text)}"`;
+
+      if (prompts.length > 0) {
+        clarifyQuestionsEl.style.display = "block";
+        clarifyQuestionsEl.innerHTML =
+          `<strong>To make this clearer for your doctor, you can clarify:</strong><ul>` +
+          prompts.map((p) => `<li>${escapeHtml(p)}</li>`).join("") +
+          `</ul>`;
+      } else {
+        clarifyQuestionsEl.style.display = "none";
+        clarifyQuestionsEl.innerHTML = "";
+      }
+
+      clarifyBox.classList.add("visible");
+      updateNotesConfirmBadge();
+      return true;
+    }
+
+    function confirmPatientNotes() {
+      const ok = clarifyPatientNotes();
+      if (!ok) return;
+
+      isNotesConfirmed = true;
+      updateNotesConfirmBadge();
+      showAlert(
+        "voiceAlert",
+        "Confirmed! Your note has been added to the Questions & Notes for Your Doctor section below.",
+        "success",
+        false
+      );
+      generateDoctorQuestions();
+    }
+
+    function readNotesAloud() {
+      hideAlert("voiceAlert");
+      const notesEl = document.getElementById("patientNotesInput");
+      const check = validatePatientNotes(notesEl.value);
+      if (!check.valid) {
+        showAlert("voiceAlert", check.error, "error", false);
+        return;
+      }
+
+      if (!("speechSynthesis" in window)) {
+        showAlert("voiceAlert", "Read-aloud speech is not supported in this browser.", "warn", false);
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(check.text);
+      const hasDevanagari = /[\u0900-\u097F]/.test(check.text);
+      utterance.lang = hasDevanagari ? "hi-IN" : (document.getElementById("voiceLangSelect").value || "en-IN");
+      utterance.rate = 0.95;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function focusNotesForEdit() {
+      const notesEl = document.getElementById("patientNotesInput");
+      notesEl.focus();
+    }
+
+    function appendNotePhrase(phrase) {
+      const notesEl = document.getElementById("patientNotesInput");
+      const needsSpace = notesEl.value && !notesEl.value.endsWith(" ") && !notesEl.value.endsWith("\n");
+      notesEl.value += (needsSpace ? " " : "") + phrase;
+      notesEl.focus();
+      handlePatientNotesChange();
+      clarifyPatientNotes();
+    }
+
+    function clearPatientNotes() {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      const notesEl = document.getElementById("patientNotesInput");
+      notesEl.value = "";
+      notesEl.classList.remove("input-invalid");
+      isNotesConfirmed = false;
+      document.getElementById("clarifyBox").classList.remove("visible");
+      hideAlert("voiceAlert");
+      updateNotesConfirmBadge();
+      generateDoctorQuestions();
+    }
+
+    function handlePatientNotesChange() {
+      const notesEl = document.getElementById("patientNotesInput");
+      notesEl.classList.remove("input-invalid");
+      hideAlert("voiceAlert");
+      isNotesConfirmed = false;
+      updateNotesConfirmBadge();
+      generateDoctorQuestions();
+    }
+
+    function updateNotesConfirmBadge() {
+      const badge = document.getElementById("notesConfirmBadge");
+      const text = (document.getElementById("patientNotesInput").value || "").trim();
+      if (!text) {
+        badge.style.display = "none";
+        return;
+      }
+      badge.style.display = "inline-flex";
+      if (isNotesConfirmed) {
+        badge.className = "confirm-badge confirmed";
+        badge.textContent = "Confirmed / पुष्ट";
+      } else {
+        badge.className = "confirm-badge pending";
+        badge.textContent = "Needs Confirmation";
+      }
+    }
+
+    /* -------------------------------------------------------------------------
+       Image & PDF Preprocessing + OCR
+       ------------------------------------------------------------------------- */
+    function preprocessCanvasForOCR(source) {
+      const srcW = source.naturalWidth || source.videoWidth || source.width;
+      const srcH = source.naturalHeight || source.videoHeight || source.height;
+
+      if (!srcW || !srcH) {
+        throw new Error("Image dimensions could not be read.");
+      }
+
+      const scale = srcW < 2200 ? Math.min(3, 2200 / srcW) : 1;
+      const targetW = Math.round(srcW * scale);
+      const targetH = Math.round(srcH * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(source, 0, 0, targetW, targetH);
+
+      const imageData = ctx.getImageData(0, 0, targetW, targetH);
+      const data = imageData.data;
+      const contrastFactor = 1.45;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const contrasted = Math.max(0, Math.min(255, (gray - 128) * contrastFactor + 128));
+        data[i] = contrasted;
+        data[i + 1] = contrasted;
+        data[i + 2] = contrasted;
+        data[i + 3] = 255;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      return canvas;
+    }
+
+    function loadImageElement(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("The image file could not be decoded."));
+        img.src = dataUrl;
+      });
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Failed to read file from disk."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleUpload(file) {
+      hideAlert("statusAlert");
+      hideAlert("saveAlert");
+
+      if (!file) return;
+
+      const fileName = file.name.toLowerCase();
+      const isImage = file.type.startsWith("image/") || /\.(jpg|jpeg|png)$/.test(fileName);
+      const isPdf = file.type === "application/pdf" || fileName.endsWith(".pdf");
+
+      if (!isImage && !isPdf) {
+        showAlert(
+          "statusAlert",
+          "Unsupported file format. Please upload a JPG, PNG, or PDF report, or try a next step:",
+          "error",
+          true
+        );
+        return;
+      }
+
+      if (file.size === 0) {
+        showAlert(
+          "statusAlert",
+          "The selected file is empty (0 bytes). Please choose a valid report file:",
+          "error",
+          true
+        );
+        return;
+      }
+
+      const previewBox = document.getElementById("previewBox");
+      previewBox.innerHTML = '<div class="preview-placeholder">Preparing file preview...</div>';
+
+      try {
+        if (isImage) {
+          const dataUrl = await readFileAsDataURL(file);
+          const imgEl = await loadImageElement(dataUrl);
+          previewBox.innerHTML = `<img src="${dataUrl}" alt="Uploaded report preview" />`;
+
+          updateProgress(true, "Enhancing image contrast & resolution...", 10);
+          const processedCanvas = preprocessCanvasForOCR(imgEl);
+          await runOCR([processedCanvas]);
+        } else if (isPdf) {
+          if (typeof pdfjsLib === "undefined") {
+            throw new Error("PDF.js library failed to load (check your internet connection).");
+          }
+
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+          if (!pdf || pdf.numPages < 1) {
+            throw new Error("The PDF file appears empty or unreadable.");
+          }
+
+          const processedCanvases = [];
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            updateProgress(
+              true,
+              `Rendering & enhancing PDF page ${pageNum} of ${pdf.numPages}...`,
+              (pageNum / pdf.numPages) * 18
+            );
+            const page = await pdf.getPage(pageNum);
+            const baseViewport = page.getViewport({ scale: 1.0 });
+            const renderScale = Math.max(2.0, Math.min(3.0, 2200 / baseViewport.width));
+            const viewport = page.getViewport({ scale: renderScale });
+
+            const rawCanvas = document.createElement("canvas");
+            const ctx = rawCanvas.getContext("2d");
+            rawCanvas.width = viewport.width;
+            rawCanvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            if (pageNum === 1) {
+              previewBox.innerHTML = "";
+              const previewCanvas = document.createElement("canvas");
+              previewCanvas.width = rawCanvas.width;
+              previewCanvas.height = rawCanvas.height;
+              previewCanvas.getContext("2d").drawImage(rawCanvas, 0, 0);
+              previewBox.appendChild(previewCanvas);
+            }
+
+            processedCanvases.push(preprocessCanvasForOCR(rawCanvas));
+          }
+
+          await runOCR(processedCanvases);
+        }
+      } catch (err) {
+        console.error("Upload/Preprocessing Error:", err);
+        updateProgress(false);
+        showAlert(
+          "statusAlert",
+          `Could not open this file (${err.message || "unreadable file"}). Next steps:`,
+          "error",
+          true
+        );
+      }
+    }
+
+    async function runOCR(canvases) {
+      if (typeof Tesseract === "undefined") {
+        updateProgress(false);
+        showAlert(
+          "statusAlert",
+          "OCR engine (Tesseract.js) could not load. Please check your internet connection or use a fallback:",
+          "error",
+          true
+        );
+        return;
+      }
+
+      let worker = null;
+      try {
+        const total = canvases.length;
+        let combinedText = "";
+
+        updateProgress(true, "Initializing OCR engine...", 20);
+        worker = await Tesseract.createWorker("eng", 1, {});
+
+        await worker.setParameters({
+          tessedit_pageseg_mode: "6",
+          preserve_interword_spaces: "1"
+        });
+
+        for (let i = 0; i < total; i++) {
+          const pct = 25 + (i / total) * 70;
+          updateProgress(true, `Reading text from page ${i + 1} of ${total}...`, pct);
+          const result = await worker.recognize(canvases[i]);
+          combinedText += (result?.data?.text || "") + "\n";
+        }
+
+        updateProgress(true, "Cleaning and parsing extracted text...", 100);
+        setTimeout(() => updateProgress(false), 550);
+
+        const cleanedText = cleanOcrText(combinedText).trim();
+        document.getElementById("rawOcrText").value = cleanedText;
+        processExtractedText(cleanedText);
+      } catch (err) {
+        console.error("Tesseract OCR Error:", err);
+        updateProgress(false);
+        showAlert(
+          "statusAlert",
+          "OCR could not extract text cleanly (possible internet or image issue). Try these next steps:",
+          "error",
+          true
+        );
+      } finally {
+        if (worker) {
+          try {
+            await worker.terminate();
+          } catch (_) {
+            // Ignore cleanup errors
+          }
+        }
+      }
+    }
+
+    function cleanOcrText(rawText) {
+      if (!rawText || typeof rawText !== "string") return "";
+      return rawText
+        .replace(/[|¦_=]/g, " ")
+        .replace(/[–—−~]/g, "-")
+        .replace(/([A-Za-z0-9\)]):(\S)/g, "$1: $2")
+        .replace(/\b[\dOo.,]+\b/g, (token) => (/\d/.test(token) ? token.replace(/[Oo]/g, "0") : token));
+    }
+
+    function processExtractedText(text) {
+      const cleaned = cleanOcrText(text);
+      const parsed = parseReportText(cleaned);
+      currentRows = parsed;
+
+      if (parsed.length === 0) {
+        showAlert(
+          "statusAlert",
+          "Zero recognized lab tests were detected. You can check the raw text box or choose a next step:",
+          "warn",
+          true
+        );
+      } else {
+        showAlert(
+          "statusAlert",
+          `Detected ${parsed.length} lab test(s). Please verify the values below before saving.`,
+          "success",
+          false
+        );
+      }
+
+      renderTable();
+      renderExplanations();
+      generateDoctorQuestions();
+    }
+
+    function reparseFromTextarea() {
+      const rawText = (document.getElementById("rawOcrText").value || "").trim();
+      if (!rawText) {
+        showAlert(
+          "statusAlert",
+          "Raw text box is empty. Upload a report, paste lab lines, or try a next step:",
+          "warn",
+          true
+        );
+        return;
+      }
+      processExtractedText(rawText);
+    }
+
+    function normalizeTestName(rawName) {
+      if (!rawName || typeof rawName !== "string") return null;
+
+      if (/\b(non[\s\-]*hdl|ratio)\b/i.test(rawName)) {
+        return null;
+      }
+      if (/\/.*(?:hdl|ldl|tc|cholesterol)/i.test(rawName) || /(?:hdl|ldl|cholesterol|triglyceride).*\//i.test(rawName)) {
+        return null;
+      }
+
+      const cleaned = rawName
+        .toLowerCase()
+        .replace(/[\(\)\[\]:,\.\-\_]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!cleaned) return null;
+
+      if (TEST_ALIASES[cleaned]) {
+        return TEST_ALIASES[cleaned];
+      }
+
+      const sortedAliases = Object.keys(TEST_ALIASES).sort((a, b) => b.length - a.length);
+      for (const alias of sortedAliases) {
+        const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+        if (regex.test(cleaned)) {
+          return TEST_ALIASES[alias];
+        }
+      }
+
+      return null;
+    }
+
+    function extractCleanUnit(text) {
+      if (!text) return "";
+
+      const knownUnitRegex =
+        /(?:million\/cumm|cells\/cumm|lakhs\/cumm|x?10\^?\d\/[A-Za-z]+|uIU\/mL|mIU\/mL|mIU\/L|ng\/mL|ng\/dL|pg\/mL|ug\/dL|µg\/dL|mg\/dL|gm\/dL|g\/dL|mmol\/L|\/cumm|\/uL|\/mm3|fL|pg|%)/i;
+      const knownMatch = text.match(knownUnitRegex);
+      if (knownMatch) {
+        return knownMatch[0];
+      }
+
+      const stripped = text
+        .replace(/[\(\)\[\]:]/g, " ")
+        .replace(/\b(adult|male|female|men|women|ref|reference|range|normal|desirable|borderline|optimal|high|low|value|result|to)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!stripped) return "";
+      const firstToken = stripped.split(/\s+/)[0];
+      if (/^[A-Za-z%\/µ\^0-9\.\*]{1,16}$/.test(firstToken) && !/^\d+(?:\.\d+)?$/.test(firstToken)) {
+        return firstToken;
+      }
+      return "";
+    }
+
+    function parseReportText(cleanedText) {
+      if (!cleanedText || typeof cleanedText !== "string") return [];
+
+      const lines = cleanedText.split(/\r?\n/);
+      const results = [];
+      const seenTests = new Set();
+
+      for (let line of lines) {
+        line = line.replace(/\t+/g, " ").replace(/\s+/g, " ").trim();
+        if (!line || line.length < 4) continue;
+
+        if (/^(test|investigation|parameter)\b.*\b(value|result|unit|range)\b/i.test(line)) {
+          continue;
+        }
+
+        line = line.replace(/^(\d+[\.\)]\s*|[\-\*\u2022]\s*)/, "");
+
+        const lineMatch = line.match(
+          /^([A-Za-z][A-Za-z0-9\s\.\-\/\(\),%]{1,52}?)\s*[:\-]?\s+(\d[\d,]*(?:\.\d+)?)\s*(.*)$/
+        );
+        if (!lineMatch) continue;
+
+        const rawTestName = lineMatch[1].trim();
+        const canonicalName = normalizeTestName(rawTestName);
+        if (!canonicalName) continue;
+
+        const numericValue = parseFloat(lineMatch[2].replace(/,/g, ""));
+        if (Number.isNaN(numericValue)) continue;
+
+        let remainder = (lineMatch[3] || "").trim();
+        remainder = remainder.replace(/^(H|L|High|Low|\*)\b\s*/i, "").trim();
+
+        let rangeText = "";
+        let unit = "";
+
+        const minMaxRegex = /\(?\s*(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)\s*\)?/;
+        const boundRegex = /\(?\s*(<=|>=|<|>|up\s*to|upto|less\s*than|more\s*than)\s*(\d[\d,]*(?:\.\d+)?)\s*\)?/i;
+
+        let rangeMatch = remainder.match(minMaxRegex);
+        let isBound = false;
+        if (!rangeMatch) {
+          rangeMatch = remainder.match(boundRegex);
+          isBound = Boolean(rangeMatch);
+        }
+
+        if (rangeMatch) {
+          if (!isBound) {
+            rangeText = `${rangeMatch[1]} - ${rangeMatch[2]}`;
+          } else {
+            const normalizedOp = rangeMatch[1].toLowerCase().replace(/\s+/g, " ").replace("upto", "up to");
+            rangeText = `${normalizedOp} ${rangeMatch[2]}`;
+          }
+
+          const beforeRange = remainder.slice(0, rangeMatch.index).trim();
+          const afterRange = remainder.slice(rangeMatch.index + rangeMatch[0].length).trim();
+
+          unit = extractCleanUnit(beforeRange);
+          if (!unit && afterRange) {
+            unit = extractCleanUnit(afterRange);
+          }
+        } else if (remainder) {
+          unit = extractCleanUnit(remainder);
+        }
+
+        if (!seenTests.has(canonicalName)) {
+          seenTests.add(canonicalName);
+          results.push({
+            test: canonicalName,
+            value: numericValue,
+            unit: unit,
+            rangeText: rangeText
+          });
+        }
+      }
+
+      return results;
+    }
+
+    /**
+     * Validates a row's numeric value and range format, returning explicit
+     * field-level errors when invalid input is entered.
+     */
+    function validateRowInputs(row) {
+      let valueError = "";
+      let rangeError = "";
+
+      if (row.value !== "" && row.value !== null && row.value !== undefined) {
+        const num = parseFloat(row.value);
+        if (Number.isNaN(num)) {
+          valueError = "Enter a valid number";
+        } else if (num < 0) {
+          valueError = "Value cannot be negative";
+        }
+      }
+
+      const rangeStr = (row.rangeText || "").trim();
+      if (rangeStr) {
+        const cleaned = cleanOcrText(rangeStr).trim();
+        const minMax = cleaned.match(/^\(?\s*(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)\s*\)?$/);
+        const upper = cleaned.match(/^\(?\s*(<=|<|less\s*than|up\s*to|upto)\s*(\d[\d,]*(?:\.\d+)?)\s*\)?$/i);
+        const lower = cleaned.match(/^\(?\s*(>=|>|more\s*than)\s*(\d[\d,]*(?:\.\d+)?)\s*\)?$/i);
+
+        if (minMax) {
+          const min = parseFloat(minMax[1].replace(/,/g, ""));
+          const max = parseFloat(minMax[2].replace(/,/g, ""));
+          if (min > max) {
+            rangeError = "Min cannot exceed max";
+          }
+        } else if (!upper && !lower) {
+          rangeError = "Use e.g. 13.0 - 17.0 or < 200";
+        }
+      }
+
+      return { valueError, rangeError };
+    }
+
+    /**
+     * Evaluates a numeric value against the lab-printed reference range using
+     * neutral, non-diagnostic wording.
+     */
+    function evaluateStatus(value, rangeText) {
+      const validation = validateRowInputs({ value, rangeText });
+      if (validation.valueError) {
+        return { code: "invalid", label: "Invalid value", css: "status-above" };
+      }
+      if (validation.rangeError) {
+        return { code: "invalid", label: "Invalid range", css: "status-above" };
+      }
+
+      const num = parseFloat(value);
+      if (Number.isNaN(num) || !rangeText || !rangeText.trim()) {
+        return { code: "missing", label: "No range printed", css: "status-missing" };
+      }
+
+      const text = cleanOcrText(rangeText).trim();
+
+      const minMax = text.match(/\(?\s*(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)\s*\)?/);
+      if (minMax) {
+        const min = parseFloat(minMax[1].replace(/,/g, ""));
+        const max = parseFloat(minMax[2].replace(/,/g, ""));
+        if (!Number.isNaN(min) && !Number.isNaN(max)) {
+          if (num < min) {
+            return { code: "below", label: "Below lab range", css: "status-below" };
+          }
+          if (num > max) {
+            return { code: "above", label: "Above lab range", css: "status-above" };
+          }
+          return { code: "within", label: "Within lab range", css: "status-within" };
+        }
+      }
+
+      const upper = text.match(/^\(?\s*(<=|<|less\s*than|up\s*to|upto)\s*(\d[\d,]*(?:\.\d+)?)\s*\)?/i);
+      if (upper) {
+        const op = upper[1].toLowerCase();
+        const max = parseFloat(upper[2].replace(/,/g, ""));
+        if (!Number.isNaN(max)) {
+          const strictLess = op === "<" || op.startsWith("less");
+          if (strictLess ? num >= max : num > max) {
+            return { code: "above", label: "Above lab range", css: "status-above" };
+          }
+          return { code: "within", label: "Within lab range", css: "status-within" };
+        }
+      }
+
+      const lower = text.match(/^\(?\s*(>=|>|more\s*than)\s*(\d[\d,]*(?:\.\d+)?)\s*\)?/i);
+      if (lower) {
+        const op = lower[1].toLowerCase();
+        const min = parseFloat(lower[2].replace(/,/g, ""));
+        if (!Number.isNaN(min)) {
+          const strictGreater = op === ">" || op.startsWith("more");
+          if (strictGreater ? num <= min : num < min) {
+            return { code: "below", label: "Below lab range", css: "status-below" };
+          }
+          return { code: "within", label: "Within lab range", css: "status-within" };
+        }
+      }
+
+      return { code: "missing", label: "No range printed", css: "status-missing" };
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("resultsTableBody");
+
+      if (!currentRows || currentRows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">
+              No tests in table. Upload a report, click <strong>Load sample report</strong>, or click <strong>+ Add Test Row</strong>.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = "";
+
+      currentRows.forEach((row, index) => {
+        const status = evaluateStatus(row.value, row.rangeText);
+        const validation = validateRowInputs(row);
+        const tr = document.createElement("tr");
+        tr.dataset.rowIndex = String(index);
+
+        const testOptions = CANONICAL_TESTS.map(
+          (t) => `<option value="${escapeHtml(t)}" ${row.test === t ? "selected" : ""}>${escapeHtml(t)}</option>`
+        ).join("");
+        const customOption =
+          row.test && !CANONICAL_TESTS.includes(row.test)
+            ? `<option value="${escapeHtml(row.test)}" selected>${escapeHtml(row.test)}</option>`
+            : "";
+
+        tr.innerHTML = `
+          <td>
+            <select class="table-input" aria-label="Test name" onchange="updateRowField(${index}, 'test', this.value)">
+              ${customOption}${testOptions}
+            </select>
+          </td>
+          <td>
+            <input id="valueInput_${index}" type="number" min="0" step="any"
+              class="table-input value-input ${validation.valueError ? "cell-error" : ""}"
+              aria-label="Value"
+              value="${escapeHtml(String(row.value))}"
+              oninput="updateRowField(${index}, 'value', this.value)" />
+            <span id="valueHint_${index}" class="cell-hint">${escapeHtml(validation.valueError)}</span>
+          </td>
+          <td>
+            <input type="text" class="table-input" aria-label="Unit" placeholder="e.g. g/dL"
+              value="${escapeHtml(row.unit || "")}"
+              oninput="updateRowField(${index}, 'unit', this.value)" />
+          </td>
+          <td>
+            <input id="rangeInput_${index}" type="text"
+              class="table-input ${validation.rangeError ? "cell-error" : ""}"
+              aria-label="Reference range" placeholder="e.g. 13.0 - 17.0"
+              value="${escapeHtml(row.rangeText || "")}"
+              oninput="updateRowField(${index}, 'rangeText', this.value)" />
+            <span id="rangeHint_${index}" class="cell-hint">${escapeHtml(validation.rangeError)}</span>
+          </td>
+          <td>
+            <span id="statusPill_${index}" class="status-pill ${status.css}">${escapeHtml(status.label)}</span>
+          </td>
+          <td class="no-print">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(${index})">Remove</button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    /**
+     * Updates a single cell in-place without rebuilding the table DOM,
+     * preserving input focus and cursor position while showing live validation hints.
+     */
+    function updateRowField(index, field, value) {
+      if (!currentRows[index]) return;
+
+      if (field === "value") {
+        if (value === "") {
+          currentRows[index].value = "";
+        } else {
+          const parsed = parseFloat(value);
+          currentRows[index].value = Number.isNaN(parsed) ? value : parsed;
+        }
+      } else {
+        currentRows[index][field] = value;
+      }
+
+      const validation = validateRowInputs(currentRows[index]);
+
+      const valueInput = document.getElementById(`valueInput_${index}`);
+      const valueHint = document.getElementById(`valueHint_${index}`);
+      if (valueInput && valueHint) {
+        valueInput.classList.toggle("cell-error", Boolean(validation.valueError));
+        valueHint.textContent = validation.valueError;
+      }
+
+      const rangeInput = document.getElementById(`rangeInput_${index}`);
+      const rangeHint = document.getElementById(`rangeHint_${index}`);
+      if (rangeInput && rangeHint) {
+        rangeInput.classList.toggle("cell-error", Boolean(validation.rangeError));
+        rangeHint.textContent = validation.rangeError;
+      }
+
+      const pill = document.getElementById(`statusPill_${index}`);
+      if (pill) {
+        const status = evaluateStatus(currentRows[index].value, currentRows[index].rangeText);
+        pill.className = `status-pill ${status.css}`;
+        pill.textContent = status.label;
+      }
+
+      renderExplanations();
+      generateDoctorQuestions();
+    }
+
+    function addManualRow() {
+      currentRows.push({
+        test: "Hemoglobin",
+        value: "",
+        unit: "g/dL",
+        rangeText: ""
+      });
+      renderTable();
+      renderExplanations();
+      generateDoctorQuestions();
+    }
+
+    function removeRow(index) {
+      currentRows.splice(index, 1);
+      renderTable();
+      renderExplanations();
+      generateDoctorQuestions();
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.getElementById("langEnBtn").classList.toggle("active", lang === "en");
+      document.getElementById("langHiBtn").classList.toggle("active", lang === "hi");
+      renderExplanations();
+    }
+
+    function renderExplanations() {
+      const container = document.getElementById("explanationsContainer");
+      const uniqueTests = Array.from(new Set(currentRows.map((r) => r.test).filter(Boolean)));
+
+      if (uniqueTests.length === 0) {
+        container.innerHTML = `<div class="empty-state">Detected tests will show plain-language explanations here.</div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      uniqueTests.forEach((testName) => {
+        const info = TEST_EXPLANATIONS[testName];
+        const description = info
+          ? info[currentLang]
+          : currentLang === "hi"
+          ? "इस परीक्षण का सरल विवरण उपलब्ध नहीं है। कृपया अपने डॉक्टर से पूछें।"
+          : "Plain-language explanation is not in the built-in dictionary. Please ask your doctor.";
+
+        const card = document.createElement("div");
+        card.className = "explain-card";
+        card.innerHTML = `
+          <h4>${escapeHtml(testName)}</h4>
+          <p>${escapeHtml(description)}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function generateDoctorQuestions() {
+      const listEl = document.getElementById("questionsList");
+      const notesBox = document.getElementById("patientNotesSummary");
+      const rawNotes = (document.getElementById("patientNotesInput").value || "").trim();
+      const notesValidation = rawNotes ? validatePatientNotes(rawNotes) : { valid: false };
+      const usableNotes = notesValidation.valid ? notesValidation.text : "";
+
+      if (usableNotes) {
+        const badgeText = isNotesConfirmed ? "Confirmed" : "Unconfirmed draft";
+        notesBox.style.display = "block";
+        notesBox.innerHTML = `<strong>What I want to share with my doctor (${badgeText}):</strong><span>${escapeHtml(usableNotes)}</span>`;
+      } else {
+        notesBox.style.display = "none";
+        notesBox.innerHTML = "";
+      }
+
+      const validTests = currentRows.filter(
+        (r) => r.test && r.value !== "" && !validateRowInputs(r).valueError && !Number.isNaN(parseFloat(r.value))
+      );
+
+      if (validTests.length === 0 && !usableNotes) {
+        listEl.innerHTML = `<li class="empty-state" style="list-style: none;">Questions will appear here once tests are loaded or notes are confirmed.</li>`;
+        return;
+      }
+
+      const questions = [];
+
+      if (usableNotes) {
+        questions.push(
+          "Could what I am currently experiencing be connected to any of these lab readings, or should it be checked separately?"
+        );
+      }
+
+      if (validTests.length > 0) {
+        let outOfRangeCount = 0;
+
+        validTests.forEach((row) => {
+          const status = evaluateStatus(row.value, row.rangeText);
+          if (status.code === "below") {
+            outOfRangeCount++;
+            questions.push(
+              `This ${row.test} reading (${row.value}${row.unit ? " " + row.unit : ""}) is below the lab's printed range (${row.rangeText}). What factors can contribute to this, and should the test be repeated?`
+            );
+          } else if (status.code === "above") {
+            outOfRangeCount++;
+            questions.push(
+              `This ${row.test} reading (${row.value}${row.unit ? " " + row.unit : ""}) is above the lab's printed range (${row.rangeText}). What factors can contribute to this, and should the test be repeated?`
+            );
+          }
+        });
+
+        if (outOfRangeCount === 0) {
+          questions.push(
+            "All readings with a printed reference interval are within the lab range. Are any follow-up tests suggested for routine monitoring?",
+            "When should these baseline lab tests be repeated for future comparison?"
+          );
+        } else {
+          questions.push(
+            "Could temporary factors such as fasting duration, hydration, or recent activity influence these numbers?",
+            "When would be an appropriate time to repeat these tests and compare trends?"
+          );
+        }
+      }
+
+      listEl.innerHTML = questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("");
+    }
+
+    function copyQuestions() {
+      const rawNotes = (document.getElementById("patientNotesInput").value || "").trim();
+      const notesValidation = rawNotes ? validatePatientNotes(rawNotes) : { valid: false };
+      const usableNotes = notesValidation.valid ? notesValidation.text : "";
+
+      const items = Array.from(document.querySelectorAll("#questionsList li"))
+        .filter((li) => !li.classList.contains("empty-state"))
+        .map((li, i) => `${i + 1}. ${li.textContent.trim()}`)
+        .join("\n");
+
+      const combined = (usableNotes ? `My Notes / Experience:\n${usableNotes}\n\n` : "") +
+        (items ? `Questions for Doctor:\n${items}` : "");
+
+      if (!combined.trim()) {
+        showAlert("copyFeedback", "Nothing to copy yet. Load a report or enter valid notes first.", "warn", false);
+        setTimeout(() => hideAlert("copyFeedback"), 3000);
+        return;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+          .writeText(combined)
+          .then(() => showAlert("copyFeedback", "Notes and questions copied to clipboard.", "success", false))
+          .catch(() => showAlert("copyFeedback", "Could not copy automatically. Please select and copy.", "warn", false));
+      } else {
+        showAlert("copyFeedback", "Clipboard API unavailable in this browser. Please copy manually.", "warn", false);
+      }
+      setTimeout(() => hideAlert("copyFeedback"), 3000);
+    }
+
+    /* -------------------------------------------------------------------------
+       3. LocalStorage Read / Write Helpers (wrapped in try/catch)
+       ------------------------------------------------------------------------- */
+    function readSavedReports() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.error("Failed to read localStorage:", err);
+        return [];
+      }
+    }
+
+    function writeSavedReports(reports) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+        return true;
+      } catch (err) {
+        console.error("Failed to write localStorage:", err);
+        return false;
+      }
+    }
+
+    function saveReport() {
+      hideAlert("saveAlert");
+
+      // Validate all rows for bad values or bad range formats before saving
+      for (const row of currentRows) {
+        const validation = validateRowInputs(row);
+        if (validation.valueError) {
+          showAlert("saveAlert", `Fix invalid value for ${row.test}: ${validation.valueError}.`, "error", false);
+          return;
+        }
+        if (validation.rangeError) {
+          showAlert("saveAlert", `Fix invalid reference range for ${row.test}: ${validation.rangeError}.`, "error", false);
+          return;
+        }
+      }
+
+      const validRows = currentRows.filter((r) => r.test && r.value !== "" && !Number.isNaN(parseFloat(r.value)));
+      if (validRows.length === 0) {
+        showAlert("saveAlert", "Add at least one test with a valid numeric value before saving.", "warn", false);
+        return;
+      }
+
+      const reportDate = document.getElementById("reportDateInput").value;
+      const today = new Date().toISOString().slice(0, 10);
+      if (!reportDate) {
+        showAlert("saveAlert", "Please choose a report date before saving.", "error", false);
+        return;
+      }
+      if (reportDate > today) {
+        showAlert("saveAlert", "Report date cannot be in the future. Please select today or an earlier date.", "error", false);
+        return;
+      }
+
+      const rawNotes = (document.getElementById("patientNotesInput").value || "").trim();
+      if (rawNotes) {
+        const notesCheck = validatePatientNotes(rawNotes);
+        if (!notesCheck.valid) {
+          showAlert("saveAlert", `Please fix or clear your note first: ${notesCheck.error}`, "error", false);
+          return;
+        }
+      }
+
+      const label = (document.getElementById("reportLabelInput").value || "").trim() || "Lab Report";
+      const reports = readSavedReports();
+
+      const newReport = {
+        id: "rep_" + Date.now(),
+        date: reportDate,
+        label: label,
+        notes: rawNotes,
+        notesConfirmed: isNotesConfirmed,
+        savedAt: new Date().toISOString(),
+        tests: validRows.map((r) => ({
+          test: normalizeTestName(r.test) || r.test,
+          value: parseFloat(r.value),
+          unit: (r.unit || "").trim(),
+          rangeText: (r.rangeText || "").trim()
+        }))
+      };
+
+      reports.push(newReport);
+      const ok = writeSavedReports(reports);
+
+      if (ok) {
+        showAlert("saveAlert", `Report dated ${reportDate} saved locally on this device.`, "success", false);
+        renderHistory();
+      } else {
+        showAlert("saveAlert", "Could not save to browser storage (storage may be full or restricted).", "error", false);
+      }
+    }
+
+    function renderHistory() {
+      const reports = readSavedReports().sort((a, b) => (a.date > b.date ? -1 : 1));
+      document.getElementById("historyCountBadge").textContent = reports.length;
+
+      const historyList = document.getElementById("historyList");
+      if (reports.length === 0) {
+        historyList.innerHTML = `<div class="empty-state">No saved reports yet. Analyze and save a report first.</div>`;
+      } else {
+        historyList.innerHTML = reports
+          .map(
+            (rep) => `
+            <div class="history-item">
+              <div>
+                <strong>${escapeHtml(rep.date)}</strong> &mdash; ${escapeHtml(rep.label)}
+                <div class="card-subtitle">${rep.tests.length} test(s) saved${rep.notes ? " &bull; Includes personal notes" : ""}</div>
+              </div>
+              <div class="btn-row">
+                <button type="button" class="btn btn-sm btn-soft" onclick="loadSavedReport('${rep.id}')">Open in Analyzer</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="deleteSavedReport('${rep.id}')">Delete</button>
+              </div>
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      const availableTests = new Set();
+      reports.forEach((rep) => {
+        rep.tests.forEach((t) => {
+          const canonical = normalizeTestName(t.test) || t.test;
+          availableTests.add(canonical);
+        });
+      });
+
+      const select = document.getElementById("trendTestSelect");
+      const previousSelection = select.value;
+      const sortedTests = Array.from(availableTests).sort();
+
+      select.innerHTML = `<option value="">-- Choose a test --</option>`;
+      sortedTests.forEach((t) => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        select.appendChild(opt);
+      });
+
+      if (previousSelection && sortedTests.includes(previousSelection)) {
+        select.value = previousSelection;
+      } else if (sortedTests.length > 0) {
+        select.value = sortedTests[0];
+      }
+
+      renderTrendChart();
+    }
+
+    function loadSavedReport(reportId) {
+      const reports = readSavedReports();
+      const found = reports.find((r) => r.id === reportId);
+      if (!found) return;
+
+      currentRows = found.tests.map((t) => ({ ...t }));
+      document.getElementById("reportDateInput").value = found.date;
+      document.getElementById("reportLabelInput").value = found.label;
+      document.getElementById("patientNotesInput").value = found.notes || "";
+      isNotesConfirmed = Boolean(found.notes && found.notesConfirmed);
+
+      updateNotesConfirmBadge();
+      if (found.notes) {
+        clarifyPatientNotes();
+      } else {
+        document.getElementById("clarifyBox").classList.remove("visible");
+      }
+
+      renderTable();
+      renderExplanations();
+      generateDoctorQuestions();
+      showAlert("statusAlert", `Loaded saved report from ${found.date} (${found.label}).`, "info", false);
+      switchTab("analyzeTab");
+    }
+
+    function deleteSavedReport(reportId) {
+      const reports = readSavedReports().filter((r) => r.id !== reportId);
+      writeSavedReports(reports);
+      renderHistory();
+    }
+
+    function renderTrendChart() {
+      const selectedTest = document.getElementById("trendTestSelect").value;
+      const tbody = document.getElementById("trendTableBody");
+      const canvas = document.getElementById("trendChartCanvas");
+
+      if (trendChartInstance) {
+        trendChartInstance.destroy();
+        trendChartInstance = null;
+      }
+
+      if (!selectedTest) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Select a test above to view its historical trend.</td></tr>`;
+        return;
+      }
+
+      const reports = readSavedReports().sort((a, b) => (a.date > b.date ? 1 : -1));
+      const points = [];
+
+      reports.forEach((rep) => {
+        rep.tests.forEach((t) => {
+          const canonical = normalizeTestName(t.test) || t.test;
+          if (canonical === selectedTest) {
+            points.push({
+              date: rep.date,
+              label: rep.label,
+              value: t.value,
+              unit: t.unit,
+              rangeText: t.rangeText
+            });
+          }
+        });
+      });
+
+      if (points.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No saved entries found for ${escapeHtml(selectedTest)}.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = points
+        .map((pt) => {
+          const status = evaluateStatus(pt.value, pt.rangeText);
+          return `
+            <tr>
+              <td>${escapeHtml(pt.date)}</td>
+              <td>${escapeHtml(pt.label)}</td>
+              <td><span class="trend-value">${escapeHtml(String(pt.value))}</span></td>
+              <td>${escapeHtml(pt.unit || "-")}</td>
+              <td>${escapeHtml(pt.rangeText || "No range printed")}</td>
+              <td><span class="status-pill ${status.css}">${escapeHtml(status.label)}</span></td>
+            </tr>
+          `;
+        })
+        .join("");
+
+      if (typeof Chart !== "undefined") {
+        const ctx = canvas.getContext("2d");
+        trendChartInstance = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: points.map((p) => p.date),
+            datasets: [
+              {
+                label: `${selectedTest}${points[0].unit ? " (" + points[0].unit + ")" : ""}`,
+                data: points.map((p) => p.value),
+                borderColor: "#0b6e6e",
+                backgroundColor: "rgba(11, 110, 110, 0.12)",
+                borderWidth: 2.5,
+                pointRadius: 5,
+                pointBackgroundColor: "#064e4e",
+                tension: 0.25,
+                fill: true
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: "top"
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: false,
+                title: {
+                  display: true,
+                  text: points[0].unit || "Value"
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: "Report Date"
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function loadSampleReport() {
+      const sampleOcr = [
+        "CITY DIAGNOSTIC LABORATORY",
+        "Complete Blood Count (CBC)",
+        "Hb:11.8 | g/dL | Adult (13.0–17.0)",
+        "RBC Count   4.6   million/cumm   4.5 - 5.5",
+        "Total WBC Count   7,4OO   cells/cumm   4,000 — 11,000",
+        "Platelet Count   2.4   lakhs/cumm   1.5 - 4.5",
+        "Hematocrit (PCV)   38.5   %   40.0 - 50.0",
+        "MCV   84.0   fL   83.0 - 101.0",
+        "",
+        "Lipid Profile",
+        "Total Cholesterol   218   mg/dL   < 200",
+        "HDL Cholesterol   46   mg/dL   > 40",
+        "Non-HDL Cholesterol   172   mg/dL   < 130",
+        "Cholesterol/HDL Ratio   4.7   < 5.0",
+        "LDL Cholesterol   138   mg/dL   up to 100",
+        "Triglycerides   165   mg/dL   < 150",
+        "",
+        "Thyroid Profile",
+        "TSH Ultrasensitive   5.4   uIU/mL   0.4 - 4.2",
+        "Total T3   1.2   ng/mL   0.8 - 2.0",
+        "Total T4   7.8   ug/dL   5.1 - 14.1"
+      ].join("\n");
+
+      const cleaned = cleanOcrText(sampleOcr);
+      document.getElementById("rawOcrText").value = cleaned;
+      document.getElementById("rawTextDetails").open = true;
+      document.getElementById("previewBox").innerHTML =
+        `<div class="preview-placeholder"><strong>Demo Mode Active</strong><br/>Loaded sample CBC, Lipid &amp; Thyroid report text.</div>`;
+      document.getElementById("reportLabelInput").value = "Sample Checkup";
+
+      processExtractedText(cleaned);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    document.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
+
+Improvements & Bug Fixes Added:
+
+1.  Listen, Clarify & Confirm Your Concern:
+      - Clarify & Check: Checks if your spoken/typed note is clear and prompts
+        you neutrally if helpful context like duration (कब से परेशानी है) or
+        timing (सुबह/शाम/खाने के बाद) is missing.
+      - Confirm & Read Aloud: Shows "I understood your note as: ..." with
+        Confirm Note / पुष्टि करें, Read Aloud / सुनकर जाँचें (speaks back your
+        text via browser SpeechSynthesis in Hindi or English), and Edit buttons.
+      - Voice Duplicate-Word Bug Fix: Rebuilds the session transcript cleanly
+        from event.results to prevent repeated words on mobile/Chrome speech
+        recognition.
+2.  Wrong/Invalid Input Error Handling:
+      - Notes validation: Rejects empty input, single-word/too-short notes,
+        numeric-only text (12345), keyboard-mash gibberish (aaaaaa / asdf), or
+        unfilled blanks (___) with clear bilingual error messages.
+      - Lab table cell validation: Shows inline red highlighting and clear error
+        hints for negative/non-numeric values, inverted ranges (min > max like
+        20 - 10), or malformed range text, and blocks saving until fixed.
+      - Date & Raw-text validation: Blocks empty or future report dates and
+        warns if Re-parse Text is clicked on an empty text box.
+
+        
